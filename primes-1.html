@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        svg {
+            width: 1000px;
+            height: 3000px;
+            border: solid 1px #999;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 
+    TO DO:
+        - Colors run out for larger prime numbers
+            - Number each prime sequentially and re-use the colors
+        - Drawing is slow past 150 numbers
+            - Convert to drawing on canvas instead of using SVG?
+    -->
+
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink">
+
+        <style>
+            .name { font: 5px sans-serif; }
+            .factors { font: 3px sans-serif; }
+
+            .color-base { stroke: #888; }
+            .color-2 { stroke: #0074D9; }
+            .color-3 { stroke: #2ECC40; }
+            .color-5 { stroke: #FF4136; }
+            .color-7 { stroke: #FFDC00; }
+            .color-11 { stroke: #39CCCC; }
+            .color-13 { stroke: #3D9970; }
+            .color-17 { stroke: #FF851B; }
+            .color-19 { stroke: #01FF70; }
+            .color-23 { stroke: #7FDBFF; }
+            .color-29 { stroke: #F012BE; }
+            .color-X1 { stroke: #B10DC9; }
+            .color-X2 { stroke: #85144b; }
+            .color-X3 { stroke: #001f3f; }
+        </style>
+
+        <defs id="defs">
+
+            <line
+                id="line"
+                x0="0" y0="0" x1="10" y1="0"
+                style="
+                    stroke-opacity: 0.5;
+                    stroke-linecap: round;
+                    stroke-width:3px;
+                    vector-effect:non-scaling-stroke"
+            />
+
+            <line
+                id="node"
+                x1="0" y1="0" x2="0" y2="0"
+                style="
+                    stroke:#888;
+                    stroke-opacity: 0.5;
+                    stroke-linecap: round;
+                    stroke-width: 6px;
+                    vector-effect: non-scaling-stroke"
+            />
+
+            <!-- Line with node at the end. The line is ten units long. -->
+            <g id="lineWithNode">
+                <use x="0" y="0" xlink:href="#line" />
+                <use x="10" y="0" xlink:href="#node" />
+            </g>
+
+        </defs>
+
+        <g
+            id="view"
+            transform="scale(4)"
+        ></g>
+
+    </svg>
+
+    <script src="numberDefs.js"></script>
+    <script>
+
+        const scale = 0.5;
+        const reverseFactors = false;
+        const twoOffsetAngle = 90;
+        const rowHeight = 35;
+        const colWidth = 35;
+        const rowCount = 21;
+        const colCount = 7;
+        const cellCount = rowCount * colCount;
+
+        function getSvgStr({ name, n, id, childId }) {
+            const lines = [
+                `<g id="${id}">`
+            ];
+            for (let i = 0; i < n; i++) {
+                let angle = i * (360 / n);
+                
+                // n = 2 is special - rotate by twoOffsetAngle to
+                // prevent overlapping
+                if (n == 2) {
+                    angle += twoOffsetAngle;
+                }
+                
+                lines.push(
+                    `    <g transform="rotate(${angle})">`
+                );
+                if (childId) {
+                    lines.push(
+                        `        <g transform="translate(10) scale(${scale})">`,
+                        `            <use xlink:href="#${childId}" />`,
+                        `        </g>`,
+                        `        <use xlink:href="#line" class="color-base color-${n}" />`
+                    );
+                }
+                else {
+                    lines.push(
+                        `        <use xlink:href="#lineWithNode" class="color-base color-${n}" />`
+                    );
+                }
+                lines.push(
+                    `    </g>`
+                );
+            }
+            lines.push(
+                `</g>`
+            );
+
+            // Add a def with id of number name so that defs can be
+            // found by name for display
+            if (childId != null) {
+                lines.push(`<use id="${name}" xlink:href="#${id}" />`);
+            }
+
+            return lines.join('\n');
+        }
+
+        function addSvgDef(options) {
+            const defsEl = document.getElementById('defs');
+            defsEl.insertAdjacentHTML('beforeEnd', getSvgStr(options));
+        }
+
+        function drawNumber({ numberDef, x, y }) {
+            const { name, factors } = numberDef;
+            const svgStr = `<use x="${x}" y="${y}" xlink:href="#${name}" />`;
+            const viewEl = document.getElementById('view');
+            viewEl.insertAdjacentHTML('beforeEnd', svgStr);
+            const factorsStr = (factors.length > 1) ? factors.join(' x ') : 'prime';
+            const textSvgStr = `
+                <text
+                    x="${x}" y="${y - 2}"
+                    class="name"
+                    dominant-baseline="middle"
+                    text-anchor="middle"
+                >${name}</text>
+                <text
+                    x="${x}" y="${y + 2}"
+                    class="factors"
+                    dominant-baseline="middle"
+                    text-anchor="middle"
+                >${factorsStr}</text>
+                
+                `;
+            viewEl.insertAdjacentHTML('beforeEnd', textSvgStr);
+        }
+
+        function main() {
+            console.log('XXX-1');
+            for (const { name, factors } of numberDefs.slice(0, cellCount)) {
+                if (reverseFactors) {
+                    factors.reverse();
+                }
+                const n = factors[0];
+                const childId = (factors.length > 1) ? factors.slice(1).join('x') : null;
+                const id = (factors.length > 1) ? `${n}x${childId}` : `${n}`;
+                // console.log(name, JSON.stringify(factors), n, childId, id);
+                addSvgDef({ name, n, id, childId });
+            }
+            console.log('XXX-2');
+            for (let row = 0; row < rowCount; row++) {
+                for (let col = 0; col < colCount; col++) {
+                    const index = colCount * row + col;
+                    const x = (col + 0.5) * colWidth;
+                    const y = (row + 0.5) * rowHeight;
+                    const numberDef = numberDefs[index];
+                    if (!numberDef) {
+                        continue;
+                    }
+                    drawNumber({ numberDef, x, y });
+                }
+            }
+            console.log('XXX-3');
+        }
+
+        main();
+
+    </script>
+
+</body>
+</html>
