@@ -2,10 +2,16 @@
 <html>
 <head>
     <style>
+        html {
+            font-family: sans-serif;
+            text-align: center;
+            width: 1000px;
+            margin: auto;
+        }
         svg {
             width: 1000px;
-            height: 3000px;
-            border: solid 1px #999;
+            height: 2950px;
+            border: solid 1px #EEE;
         }
     </style>
 </head>
@@ -13,11 +19,13 @@
 
     <!-- 
     TO DO:
-        - Colors run out for larger prime numbers
-            - Number each prime sequentially and re-use the colors
         - Drawing is slow past 150 numbers
             - Convert to drawing on canvas instead of using SVG?
     -->
+
+    <div>
+        <h1>Prime Factor Radial Diagrams</h1>
+    </div>
 
     <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -28,19 +36,19 @@
             .factors { font: 3px sans-serif; }
 
             .color-base { stroke: #888; }
-            .color-2 { stroke: #0074D9; }
-            .color-3 { stroke: #2ECC40; }
-            .color-5 { stroke: #FF4136; }
-            .color-7 { stroke: #FFDC00; }
-            .color-11 { stroke: #39CCCC; }
-            .color-13 { stroke: #3D9970; }
-            .color-17 { stroke: #FF851B; }
-            .color-19 { stroke: #01FF70; }
-            .color-23 { stroke: #7FDBFF; }
-            .color-29 { stroke: #F012BE; }
-            .color-X1 { stroke: #B10DC9; }
-            .color-X2 { stroke: #85144b; }
-            .color-X3 { stroke: #001f3f; }
+            .color-0 { stroke: #0074D9; }
+            .color-1 { stroke: #2ECC40; }
+            .color-2 { stroke: #FF4136; }
+            .color-3 { stroke: #FFDC00; }
+            .color-4 { stroke: #39CCCC; }
+            .color-5 { stroke: #3D9970; }
+            .color-6 { stroke: #FF851B; }
+            .color-7 { stroke: #01FF70; }
+            .color-8 { stroke: #7FDBFF; }
+            .color-9 { stroke: #F012BE; }
+            .color-10 { stroke: #B10DC9; }
+            .color-11 { stroke: #85144b; }
+            .color-12 { stroke: #001f3f; }
         </style>
 
         <defs id="defs">
@@ -81,6 +89,13 @@
 
     </svg>
 
+    <p>
+        Inspired by:
+        <a href="https://disco.bu.edu/~tsl/prime-factor-chart-radial-200dpi.png">
+            https://disco.bu.edu/~tsl/prime-factor-chart-radial-200dpi.png
+        </a>
+    </p>
+
     <script src="numberDefs.js"></script>
     <script>
 
@@ -92,8 +107,9 @@
         const rowCount = 21;
         const colCount = 7;
         const cellCount = rowCount * colCount;
+        const colorCount = 13;
 
-        function getSvgStr({ name, n, id, childId }) {
+        function getSvgStr({ name, n, id, childId, colorIndex }) {
             const lines = [
                 `<g id="${id}">`
             ];
@@ -114,12 +130,12 @@
                         `        <g transform="translate(10) scale(${scale})">`,
                         `            <use xlink:href="#${childId}" />`,
                         `        </g>`,
-                        `        <use xlink:href="#line" class="color-base color-${n}" />`
+                        `        <use xlink:href="#line" class="color-base color-${colorIndex}" />`
                     );
                 }
                 else {
                     lines.push(
-                        `        <use xlink:href="#lineWithNode" class="color-base color-${n}" />`
+                        `        <use xlink:href="#lineWithNode" class="color-base color-${colorIndex}" />`
                     );
                 }
                 lines.push(
@@ -169,7 +185,10 @@
         }
 
         function main() {
-            console.log('XXX-1');
+            let primeCount = 0;
+            let colorIndexByPrime = {};
+            let colorIndex = 0;
+
             for (const { name, factors } of numberDefs.slice(0, cellCount)) {
                 if (reverseFactors) {
                     factors.reverse();
@@ -177,10 +196,16 @@
                 const n = factors[0];
                 const childId = (factors.length > 1) ? factors.slice(1).join('x') : null;
                 const id = (factors.length > 1) ? `${n}x${childId}` : `${n}`;
-                // console.log(name, JSON.stringify(factors), n, childId, id);
-                addSvgDef({ name, n, id, childId });
+                if (factors.length == 1) {
+                    // If the number is prime, make a new color
+                    colorIndex = primeCount % colorCount;
+                    colorIndexByPrime[name] = colorIndex;
+                    primeCount += 1;
+                }
+                const nColorIndex = colorIndexByPrime[n];
+                addSvgDef({ name, n, id, childId, colorIndex: nColorIndex });
             }
-            console.log('XXX-2');
+
             for (let row = 0; row < rowCount; row++) {
                 for (let col = 0; col < colCount; col++) {
                     const index = colCount * row + col;
@@ -193,7 +218,7 @@
                     drawNumber({ numberDef, x, y });
                 }
             }
-            console.log('XXX-3');
+
         }
 
         main();
